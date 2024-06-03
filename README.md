@@ -1,4 +1,4 @@
-# <img src="./FED_Icon.png" alt="식품 유통기한 관리 시스템" width="30"/> 식품 유통기한 관리 시스템
+# <img src="./FED_Icon.png" alt="식품 유통기한 관리 시스템" width="30"/> 식품 유통기한 관리 프로그램
 
 ---
 
