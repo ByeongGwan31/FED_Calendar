@@ -35,7 +35,8 @@ def get_input_with_validation(self, title, label, pattern, error_msg, previous_v
 def updateDateTextFormat(calendar, date, productData):
     if date in productData:
         format = QTextCharFormat()
-        format.setForeground(QColor('purple'))
+        color = QColor("#2E64FE")  # 하늘색
+        format.setForeground(color)
         format.setFontWeight(QFont.Bold)
         calendar.setDateTextFormat(date, format)
     else:
