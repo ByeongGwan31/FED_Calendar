@@ -1,6 +1,6 @@
 # 📅 식품 유통기한 관리 시스템
 
-![식품 유통기한 관리 시스템](FED_Icon.png)
+<img src="./FED_Icon.png" alt="식품 유통기한 관리 시스템" width="30"/>
 
 ---
 
