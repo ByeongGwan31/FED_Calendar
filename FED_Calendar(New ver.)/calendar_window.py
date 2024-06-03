@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from matplotlib import font_manager, rc
 from PyQt5.QtCore import QDate, Qt, QThread, pyqtSignal
-from PyQt5.QtGui import QColor, QTextCharFormat, QFont, QGuiApplication
+from PyQt5.QtGui import QColor, QTextCharFormat, QFont, QGuiApplication, QIcon
 from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QCalendarWidget, QLabel, QPushButton, QInputDialog, QMessageBox, QDialog, QTextEdit, QComboBox
 from calendar_functions import get_input_with_validation, is_valid_date, updateDateTextFormat, displayProductInfo
 
@@ -23,6 +23,9 @@ class CalendarWindow(QMainWindow):
         self.centralWidget = QWidget(self)
         self.setCentralWidget(self.centralWidget)
         self.layout = QVBoxLayout(self.centralWidget)
+
+        icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'FED_Icon', 'FED_Icon.ico')
+        self.setWindowIcon(QIcon(icon_path))
 
         # Calendar Layout
         self.calendarLayout = QHBoxLayout()
