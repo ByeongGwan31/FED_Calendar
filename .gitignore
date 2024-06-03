@@ -3,10 +3,7 @@
 __pycache__/
 *.py[cod]
 *.so
-
-# API_KEY
 .env
-
 .DS_Store
 .idea/
 .vscode/
