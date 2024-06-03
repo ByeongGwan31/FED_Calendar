@@ -1,27 +1,15 @@
 import os
 import pandas as pd
-import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import font_manager, rc
 from PyQt5.QtCore import QDate, Qt, QThread, pyqtSignal
-from PyQt5.QtGui import QColor, QTextCharFormat, QFont
-from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QCalendarWidget, QLabel, QPushButton, QInputDialog, QMessageBox, QDialog, QTextEdit
+from PyQt5.QtGui import QColor, QTextCharFormat, QFont, QGuiApplication
+from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QCalendarWidget, QLabel, QPushButton, QInputDialog, QMessageBox, QDialog, QTextEdit, QComboBox
 from calendar_functions import get_input_with_validation, is_valid_date, updateDateTextFormat, displayProductInfo
 
 font_path = "C:/Windows/Fonts/malgun.ttf" 
 font = font_manager.FontProperties(fname = font_path).get_name()
 rc('font', family = font)
-
-class GraphThread(QThread):
-    graph_data_ready = pyqtSignal(pd.DataFrame)
-
-    def __init__(self, csv_file_path):
-        super().__init__()
-        self.csv_file_path = csv_file_path
-
-    def run(self):
-        df = pd.read_csv(self.csv_file_path, encoding = 'euc-kr')
-        self.graph_data_ready.emit(df)
 
 class CalendarWindow(QMainWindow):
     def __init__(self):
@@ -35,28 +23,73 @@ class CalendarWindow(QMainWindow):
         self.centralWidget = QWidget(self)
         self.setCentralWidget(self.centralWidget)
         self.layout = QVBoxLayout(self.centralWidget)
+
+        # Calendar Layout
+        self.calendarLayout = QHBoxLayout()
         self.calendar = QCalendarWidget(self)
         self.calendar.setGridVisible(True)
         self.calendar.setMinimumDate(QDate(2022, 1, 1))
         self.calendar.setMaximumDate(QDate(2027, 12, 31))
-        self.layout.addWidget(self.calendar)
+        self.calendarLayout.addWidget(self.calendar)
+        self.calendar.clicked.connect(self.calendarClicked)
+
+        # Right Layout
+        self.rightLayout = QVBoxLayout()
+        
+        # Head Layout
+        self.headLayout = QVBoxLayout()
+        self.cmbMonthSelect = QComboBox(self)
+        self.cmbMonthSelect.addItem("월 선택", -1)
+        for month in range(1, 13):
+            self.cmbMonthSelect.addItem(f"{month}월", month)
+        self.cmbMonthSelect.currentIndexChanged.connect(self.monthSelected)
+        self.headLayout.addWidget(self.cmbMonthSelect)
+        self.monthInfoLabel = QTextEdit(self)
+        self.monthInfoLabel.setReadOnly(True)
+        self.headLayout.addWidget(self.monthInfoLabel)
+        self.rightLayout.addLayout(self.headLayout)
+
+        # Body Layout (reserved for future use)
+        self.bodyLayout = QVBoxLayout()
+        self.bodyLabel = QLabel("여기에 API 조회 결과가 표시됩니다.", self)
+        self.bodyLayout.addWidget(self.bodyLabel)
+        self.rightLayout.addLayout(self.bodyLayout)
+
+        # Tail Layout
+        self.tailLayout = QVBoxLayout()
+        self.btnSearchProduct = QPushButton("제품 검색", self)
+        self.btnSearchProduct.clicked.connect(self.searchProduct)
+        self.tailLayout.addWidget(self.btnSearchProduct)
+        self.searchResultLabel = QLabel("여기에 검색 결과가 표시됩니다.", self)
+        self.tailLayout.addWidget(self.searchResultLabel)
+        self.rightLayout.addLayout(self.tailLayout)
+
+        self.calendarLayout.addLayout(self.rightLayout)
+        self.layout.addLayout(self.calendarLayout)
+
         self.infoLabel = QLabel("제품을 입력해주세요", self)
         self.layout.addWidget(self.infoLabel)
+
         self.btnAddInfo = QPushButton("제품 입력", self)
         self.btnAddInfo.clicked.connect(self.addProductInfo)
         self.layout.addWidget(self.btnAddInfo)
+
         self.btnDeleteInfo = QPushButton("제품 삭제", self)
         self.btnDeleteInfo.clicked.connect(self.deleteProductInfo)
         self.layout.addWidget(self.btnDeleteInfo)
+
         self.btnViewAll = QPushButton("모든 제품 조회", self)
         self.btnViewAll.clicked.connect(self.viewAllProducts)
         self.layout.addWidget(self.btnViewAll)
-        self.btnShowGraphs = QPushButton("그래프 보기", self)
-        self.btnShowGraphs.clicked.connect(self.showGraphs)
-        self.layout.addWidget(self.btnShowGraphs)
-        self.setGeometry(300, 300, 1400, 800)
+
+        screen = QGuiApplication.primaryScreen().geometry()
+        width, height = screen.width(), screen.height()
+        window_width, window_height = int(width * 1.0), int(height * 0.8)  # 창 크기 80% 지정
+        left = int((width - window_width) / 2)
+        top = int((height - window_height) / 2)
+        self.setGeometry(left, top, window_width, window_height)
+
         self.setWindowTitle('식품 관리 캘린더')
-        self.calendar.clicked.connect(self.calendarClicked)
 
     def load_data(self):
         try:
@@ -201,29 +234,51 @@ class CalendarWindow(QMainWindow):
     def calendarClicked(self, date):
         displayProductInfo(self, date, self.productData, self.infoLabel)
 
-    def showGraphs(self):
-        self.graph_thread = GraphThread(self.csv_file_path)
-        self.graph_thread.graph_data_ready.connect(self.plotGraph)
-        self.graph_thread.start()
+    def searchProduct(self):
+        product, ok = QInputDialog.getText(self, "제품 검색", "제품명을 입력하시오:")
+        if not ok or not product:
+            return
+        
+        found = False
+        for date, entries in self.productData.items():
+            for category, prod, quantity, manufacture in entries:
+                if product == prod:
+                    found = True
+                    self.searchResultLabel.setText(
+                        f"제품명: {prod}\n카테고리: {category}\n수량: {quantity}\n제조일자: {manufacture}\n유통기한: {date.toString('yyyy-MM-dd')}")
+                    self.calendar.setSelectedDate(date)
+                    self.calendar.showSelectedDate()
+                    break
+            if found:
+                break
+        if not found:
+            self.searchResultLabel.setText("해당 제품을 찾을 수 없습니다.")
 
-    def plotGraph(self, df):
-        categories = df['카테고리'].unique()
-        colors = plt.cm.tab20(np.linspace(0, 1, len(categories)))
-        color_map = {category: color for category, color in zip(categories, colors)}
+    def monthSelected(self, index):
+        if index == 0:
+            return
 
-        fig, ax = plt.subplots(figsize = (20, 10))
+        month = self.cmbMonthSelect.itemData(index)
+        self.monthInfoLabel.clear()
+        products = {}
 
-        category_counts = df['카테고리'].value_counts()
-        bars = ax.bar(category_counts.index, category_counts.values, color = [color_map[cat] for cat in category_counts.index])
-        
-        ax.set_title('카테고리별 제품 개수', fontsize = 20)
-        ax.set_xlabel('카테고리', fontsize = 15)
-        ax.set_ylabel('개수', fontsize = 15)
-        
-        for bar in bars:
-            yval = bar.get_height()
-            ax.text(bar.get_x() + bar.get_width()/2, yval, int(yval), ha = 'center', va = 'bottom', fontsize = 18)
-        
-        # ax.grid(True, which = 'both', linestyle = '--', linewidth = 0.5)
-        
-        plt.show()
+        for date, entries in self.productData.items():
+            if date.month() == month:
+                if date not in products:
+                    products[date] = []
+                for category, product, quantity, manufacture in entries:
+                    manufactureDate = QDate.fromString(manufacture, "yyyy-MM-dd").toString('yyyy년 MM월 dd일')
+                    products[date].append(f"제조일자: {manufactureDate} | 카테고리: <b>{category}</b><br>"
+                                        f"제품명: <b>{product}</b> | 수량: <b style='color:blue;'>{quantity}</b> 개<br>")
+
+        product_texts = []
+        for date, entries in sorted(products.items()):
+            date_text = f"<b>유통기한: <b style='color:red;'>{date.toString('yyyy년 MM월 dd일')}</b></b><br>"
+            entries_text = "<br>".join(entries)
+            product_texts.append(f"{date_text}{entries_text}<br><br>")
+
+        self.monthInfoLabel.setHtml("<br>".join(product_texts))
+
+        first_day_of_month = QDate(QDate.currentDate().year(), month, 1)
+        self.calendar.setSelectedDate(first_day_of_month)
+        self.calendar.showSelectedDate()
