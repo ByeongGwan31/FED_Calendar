@@ -30,34 +30,3 @@ def get_food_nutrition_info(food_name, api_key):
     except ValueError:
         print("응답 오류")
         return None
-
-def main():
-    load_dotenv()
-    api_key = os.getenv('API_KEY')
-    
-    while True:
-        food_name = input("식품이름을 입력하시오 (종료하려면 'x'를 입력하세요): ")
-        if food_name.lower() == 'x':
-            print("프로그램을 종료합니다.")
-            break
-
-        nutrition_info = get_food_nutrition_info(food_name, api_key)
-        
-        if nutrition_info:
-            print("\n=== 영양 성분 정보 ===")
-            print(f"식품명: {nutrition_info['DESC_KOR']}")
-            print(f"1회 제공량: {nutrition_info.get('SERVING_WT', 'N/A')} g")
-            print(f"열량: {nutrition_info.get('NUTR_CONT1', 'N/A')} kcal")
-            print(f"탄수화물: {nutrition_info.get('NUTR_CONT2', 'N/A')} g")
-            print(f"단백질: {nutrition_info.get('NUTR_CONT3', 'N/A')} g")
-            print(f"지방: {nutrition_info.get('NUTR_CONT4', 'N/A')} g")
-            print(f"당류: {nutrition_info.get('NUTR_CONT5', 'N/A')} g")
-            print(f"나트륨: {nutrition_info.get('NUTR_CONT6', 'N/A')} mg")
-            print(f"콜레스테롤: {nutrition_info.get('NUTR_CONT7', 'N/A')} mg")
-            print(f"포화지방산: {nutrition_info.get('NUTR_CONT8', 'N/A')} g")
-            print(f"트랜스지방: {nutrition_info.get('NUTR_CONT9', 'N/A')} g")
-        else:
-            print("해당 식품에 대한 정보를 찾을 수 없습니다.")
-
-if __name__ == "__main__":
-    main()
