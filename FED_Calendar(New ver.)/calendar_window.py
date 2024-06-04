@@ -316,20 +316,20 @@ class CalendarWindow(QMainWindow):
     def goToday(self):
         today = QDate.currentDate()
         self.calendar.setSelectedDate(today)
-        self.highlightToday()  # 오늘 날짜 강조 유지
+        self.highlightToday()
 
     def highlightToday(self):
         today = QDate.currentDate()
         format = QTextCharFormat()
-        format.setBackground(QBrush(QColor("#7FB3D5")))  # 파랑색 배경
+        format.setBackground(QBrush(QColor("#A4E9F5")))  # 파랑색 배경
         self.calendar.setDateTextFormat(today, format)
 
     def updateDateTextFormat(self, date):
         format = QTextCharFormat()
         if date in self.productData:
-            format.setBackground(QBrush(QColor("#D6DBDF")))  # 일정 배경색
+            format.setBackground(QBrush(QColor("#F1F1F1")))  # 일정 배경색
         self.calendar.setDateTextFormat(date, format)
-        self.highlightToday()  # 오늘 날짜 강조 유지
+        self.highlightToday()
 
 if __name__ == "__main__":
     app = QApplication([])
