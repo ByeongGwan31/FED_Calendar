@@ -1,15 +1,9 @@
 import os
 import pandas as pd
-import numpy as np
-from matplotlib import font_manager, rc
-from PyQt5.QtCore import QDate, Qt, QThread, pyqtSignal
-from PyQt5.QtGui import QColor, QTextCharFormat, QFont, QGuiApplication, QIcon
-from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QCalendarWidget, QLabel, QPushButton, QInputDialog, QMessageBox, QDialog, QTextEdit, QComboBox
-from calendar_functions import get_input_with_validation, is_valid_date, updateDateTextFormat, displayProductInfo
-
-font_path = "C:/Windows/Fonts/malgun.ttf" 
-font = font_manager.FontProperties(fname = font_path).get_name()
-rc('font', family = font)
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+from calendar_functions import *
 
 class CalendarWindow(QMainWindow):
     def __init__(self):
@@ -20,14 +14,14 @@ class CalendarWindow(QMainWindow):
         self.load_data()
 
     def initUI(self):
+        self.setWindowTitle('식품 관리 캘린더')
+        icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'FED_Icon', 'FED_Icon.ico')
+        self.setWindowIcon(QIcon(icon_path))
+
         self.centralWidget = QWidget(self)
         self.setCentralWidget(self.centralWidget)
         self.layout = QVBoxLayout(self.centralWidget)
 
-        icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'FED_Icon', 'FED_Icon.ico')
-        self.setWindowIcon(QIcon(icon_path))
-
-        # Calendar Layout
         self.calendarLayout = QHBoxLayout()
         self.calendar = QCalendarWidget(self)
         self.calendar.setGridVisible(True)
@@ -36,10 +30,19 @@ class CalendarWindow(QMainWindow):
         self.calendarLayout.addWidget(self.calendar)
         self.calendar.clicked.connect(self.calendarClicked)
 
-        # Right Layout
         self.rightLayout = QVBoxLayout()
-        
-        # Head Layout
+
+        # 년도 선택 레이아웃
+        self.yearLayout = QVBoxLayout()
+        self.cmbYearSelect = QComboBox(self)
+        self.cmbYearSelect.addItem("년도 선택", -1)
+        for year in range(2022, 2028):
+            self.cmbYearSelect.addItem(f"{year}년", year)
+        self.cmbYearSelect.currentIndexChanged.connect(self.yearSelected)
+        self.yearLayout.addWidget(self.cmbYearSelect)
+        self.rightLayout.addLayout(self.yearLayout)
+
+        # 월 선택 레이아웃
         self.headLayout = QVBoxLayout()
         self.cmbMonthSelect = QComboBox(self)
         self.cmbMonthSelect.addItem("월 선택", -1)
@@ -50,22 +53,30 @@ class CalendarWindow(QMainWindow):
         self.monthInfoLabel = QTextEdit(self)
         self.monthInfoLabel.setReadOnly(True)
         self.headLayout.addWidget(self.monthInfoLabel)
+        self.headLayout.setStretch(0, 1)
+        self.headLayout.setStretch(1, 6)
         self.rightLayout.addLayout(self.headLayout)
 
-        # Body Layout (reserved for future use)
-        self.bodyLayout = QVBoxLayout()
-        self.bodyLabel = QLabel("여기에 API 조회 결과가 표시됩니다.", self)
-        self.bodyLayout.addWidget(self.bodyLabel)
-        self.rightLayout.addLayout(self.bodyLayout)
-
-        # Tail Layout
+        # 영양성분 검색 레이아웃
         self.tailLayout = QVBoxLayout()
-        self.btnSearchProduct = QPushButton("제품 검색", self)
-        self.btnSearchProduct.clicked.connect(self.searchProduct)
-        self.tailLayout.addWidget(self.btnSearchProduct)
-        self.searchResultLabel = QLabel("여기에 검색 결과가 표시됩니다.", self)
-        self.tailLayout.addWidget(self.searchResultLabel)
+        self.btnSearchNutrition = QPushButton("영양성분 검색", self)
+        self.btnSearchNutrition.clicked.connect(self.searchNutrition)
+        self.tailLayout.addWidget(self.btnSearchNutrition)
+        self.nutritionInfoLabel = QTextEdit(self)
+        self.nutritionInfoLabel.setReadOnly(True)
+        self.tailLayout.addWidget(self.nutritionInfoLabel)
+
+        self.warningLabel = QLabel("⚠️ 제품의 이름을 정확히 입력히 입력하세요.<br>⚠️ 식품 성분 DB를 조회하는거라 검색한 정보가 없을수도 있습니다.", self)
+        self.warningLabel.setStyleSheet("color: red;")
+        self.tailLayout.addWidget(self.warningLabel)
+        
+        self.tailLayout.setStretch(0, 1)
+        self.tailLayout.setStretch(1, 4)
         self.rightLayout.addLayout(self.tailLayout)
+
+        self.rightLayout.setStretch(0, 1)  # 년 선택 레이아웃 조정
+        self.rightLayout.setStretch(1, 6)  # 월 검색 레이아웃 조정
+        self.rightLayout.setStretch(2, 4)  # 영양성분 검색
 
         self.calendarLayout.addLayout(self.rightLayout)
         self.layout.addLayout(self.calendarLayout)
@@ -85,18 +96,22 @@ class CalendarWindow(QMainWindow):
         self.btnViewAll.clicked.connect(self.viewAllProducts)
         self.layout.addWidget(self.btnViewAll)
 
+        self.btnGoToday = QPushButton("오늘 날짜로 이동", self)
+        self.btnGoToday.clicked.connect(self.goToday)
+        self.layout.addWidget(self.btnGoToday)
+
         screen = QGuiApplication.primaryScreen().geometry()
         width, height = screen.width(), screen.height()
-        window_width, window_height = int(width * 1.0), int(height * 0.8)  # 창 크기 80% 지정
+        window_width, window_height = int(width * 0.9), int(height * 0.8)  # 창 크기 조정
         left = int((width - window_width) / 2)
         top = int((height - window_height) / 2)
         self.setGeometry(left, top, window_width, window_height)
 
-        self.setWindowTitle('식품 관리 캘린더')
+        self.highlightToday()
 
     def load_data(self):
         try:
-            df = pd.read_csv(self.csv_file_path, encoding='euc-kr')
+            df = pd.read_csv(self.csv_file_path, encoding = 'euc-kr')
             for _, row in df.iterrows():
                 expiryDate = QDate.fromString(row['유통기한'], 'yyyy-MM-dd')
                 if expiryDate not in self.productData:
@@ -107,7 +122,7 @@ class CalendarWindow(QMainWindow):
                     row['개수'],
                     row['제조일자']
                 ])
-                updateDateTextFormat(self.calendar, expiryDate, self.productData)
+                self.updateDateTextFormat(expiryDate)
         except FileNotFoundError:
             pass
 
@@ -123,7 +138,7 @@ class CalendarWindow(QMainWindow):
                     '유통기한': date.toString('yyyy-MM-dd')
                 })
         df = pd.DataFrame(data)
-        df.to_csv(self.csv_file_path, index=False, encoding='euc-kr')
+        df.to_csv(self.csv_file_path, index = False, encoding = 'euc-kr')
 
     def addProductInfo(self):
         date = self.calendar.selectedDate()
@@ -171,9 +186,10 @@ class CalendarWindow(QMainWindow):
                     break
             if not found:
                 self.productData[expiryDate].append([category, product, quantity, manufacture])
-            updateDateTextFormat(self.calendar, expiryDate, self.productData)
+            self.updateDateTextFormat(expiryDate)
             self.calendar.update()
             self.save_data()
+            self.highlightToday()  # 오늘 날짜 강조 유지
         else:
             QMessageBox.warning(self, "알림!", "유효한 유통기한을 입력해주세요.")
 
@@ -191,9 +207,10 @@ class CalendarWindow(QMainWindow):
                 QMessageBox.information(self, "제품 삭제", "제품이 삭제되었습니다.")
                 if not self.productData[date]:
                     del self.productData[date]
-                updateDateTextFormat(self.calendar, date, self.productData)
+                self.updateDateTextFormat(date)
                 self.calendar.update()
                 self.save_data()
+                self.highlightToday()  # 오늘 날짜 강조 유지
         else:
             QMessageBox.information(self, "제품 삭제", "이 날짜에 등록된 제품이 없습니다.")
 
@@ -215,11 +232,11 @@ class CalendarWindow(QMainWindow):
             for category, product, quantity, manufacture in entries:
                 manufactureDate = QDate.fromString(manufacture, "yyyy-MM-dd").toString('yyyy년 MM월 dd일')
                 products[date].append(f"제조일자: {manufactureDate} | 카테고리: <b>{category}</b><br>"
-                                    f"제품명: <b>{product}</b> | 수량: <b style='color:blue;'>{quantity}</b> 개<br>")
+                                    f"제품명: <b>{product}</b> | 수량: <b style = 'color:blue;'>{quantity}</b> 개<br>")
 
         product_texts = []
         for date, entries in sorted(products.items()):
-            date_text = f"<b>유통기한: <b style='color:red;'>{date.toString('yyyy년 MM월 dd일')}</b></b><br>"
+            date_text = f"<b>유통기한: <b style = 'color:red;'>{date.toString('yyyy년 MM월 dd일')}</b></b><br>"
             entries_text = "<br>".join(entries)
             product_texts.append(f"{date_text}{entries_text}<br><br>")
 
@@ -235,27 +252,37 @@ class CalendarWindow(QMainWindow):
         dialog.exec_()
 
     def calendarClicked(self, date):
-        displayProductInfo(self, date, self.productData, self.infoLabel)
+        displayProductInfo(self, date)
 
-    def searchProduct(self):
-        product, ok = QInputDialog.getText(self, "제품 검색", "제품명을 입력하시오:")
-        if not ok or not product:
+    def searchNutrition(self):
+        food_name, ok = QInputDialog.getText(self, "영양성분 검색", "성분 검색 (정확한 이름 입력):")
+        if not ok or not food_name:
             return
         
-        found = False
-        for date, entries in self.productData.items():
-            for category, prod, quantity, manufacture in entries:
-                if product == prod:
-                    found = True
-                    self.searchResultLabel.setText(
-                        f"제품명: {prod}\n카테고리: {category}\n수량: {quantity}\n제조일자: {manufacture}\n유통기한: {date.toString('yyyy-MM-dd')}")
-                    self.calendar.setSelectedDate(date)
-                    self.calendar.showSelectedDate()
-                    break
-            if found:
-                break
-        if not found:
-            self.searchResultLabel.setText("해당 제품을 찾을 수 없습니다.")
+        api_key = os.getenv('API_KEY')
+        nutrition_info = get_food_nutrition_info(food_name, api_key)
+        
+        if nutrition_info:
+            nutrition_text = (
+                f"<b>식품명:</b> {nutrition_info['DESC_KOR']}<br>"
+                f"<b>1회 제공량:</b> <span style = 'color:blue;'>{nutrition_info.get('SERVING_WT', 'N/A')}</span> g<br>"
+                f"<b>열량:</b> <span style = 'color:blue;'>{nutrition_info.get('NUTR_CONT1', 'N/A')}</span> kcal<br>"
+                f"<b>탄수화물:</b> <span style = 'color:blue;'>{nutrition_info.get('NUTR_CONT2', 'N/A')}</span> g<br>"
+                f"<b>단백질:</b> <span style = 'color:blue;'>{nutrition_info.get('NUTR_CONT3', 'N/A')}</span> g<br>"
+                f"<b>지방:</b> <span style = 'color:blue;'>{nutrition_info.get('NUTR_CONT4', 'N/A')}</span> g<br>"
+                f"<b>당류:</b> <span style = 'color:blue;'>{nutrition_info.get('NUTR_CONT5', 'N/A')}</span> g<br>"
+                f"<b>나트륨:</b> <span style = 'color:blue;'>{nutrition_info.get('NUTR_CONT6', 'N/A')}</span> mg<br>"
+                f"<b>콜레스테롤:</b> <span style = 'color:blue;'>{nutrition_info.get('NUTR_CONT7', 'N/A')}</span> mg<br>"
+                f"<b>포화지방산:</b> <span style = 'color:blue;'>{nutrition_info.get('NUTR_CONT8', 'N/A')}</span> g<br>"
+                f"<b>트랜스지방:</b> <span style = 'color:blue;'>{nutrition_info.get('NUTR_CONT9', 'N/A')}</span> g"
+            )
+            self.nutritionInfoLabel.setHtml(nutrition_text)
+        else:
+            self.nutritionInfoLabel.setText("해당 식품에 대한 정보를 찾을 수 없습니다.")
+
+    def yearSelected(self, index):
+        year = self.cmbYearSelect.itemData(index)
+        self.calendar.setSelectedDate(QDate(year, self.calendar.selectedDate().month(), 1))
 
     def monthSelected(self, index):
         if index == 0:
@@ -266,22 +293,46 @@ class CalendarWindow(QMainWindow):
         products = {}
 
         for date, entries in self.productData.items():
-            if date.month() == month:
+            if date.year() == self.calendar.selectedDate().year() and date.month() == month:
                 if date not in products:
                     products[date] = []
                 for category, product, quantity, manufacture in entries:
                     manufactureDate = QDate.fromString(manufacture, "yyyy-MM-dd").toString('yyyy년 MM월 dd일')
                     products[date].append(f"제조일자: {manufactureDate} | 카테고리: <b>{category}</b><br>"
-                                        f"제품명: <b>{product}</b> | 수량: <b style='color:blue;'>{quantity}</b> 개<br>")
+                                        f"제품명: <b>{product}</b> | 수량: <b style = 'color:blue;'>{quantity}</b> 개<br>")
 
         product_texts = []
         for date, entries in sorted(products.items()):
-            date_text = f"<b>유통기한: <b style='color:red;'>{date.toString('yyyy년 MM월 dd일')}</b></b><br>"
+            date_text = f"<b>유통기한: <b style = 'color:red;'>{date.toString('yyyy년 MM월 dd일')}</b></b><br>"
             entries_text = "<br>".join(entries)
             product_texts.append(f"{date_text}{entries_text}<br><br>")
 
         self.monthInfoLabel.setHtml("<br>".join(product_texts))
 
-        first_day_of_month = QDate(QDate.currentDate().year(), month, 1)
+        first_day_of_month = QDate(self.calendar.selectedDate().year(), month, 1)
         self.calendar.setSelectedDate(first_day_of_month)
         self.calendar.showSelectedDate()
+
+    def goToday(self):
+        today = QDate.currentDate()
+        self.calendar.setSelectedDate(today)
+        self.highlightToday()  # 오늘 날짜 강조 유지
+
+    def highlightToday(self):
+        today = QDate.currentDate()
+        format = QTextCharFormat()
+        format.setBackground(QBrush(QColor("#7FB3D5")))  # 파랑색 배경
+        self.calendar.setDateTextFormat(today, format)
+
+    def updateDateTextFormat(self, date):
+        format = QTextCharFormat()
+        if date in self.productData:
+            format.setBackground(QBrush(QColor("#D6DBDF")))  # 일정 배경색
+        self.calendar.setDateTextFormat(date, format)
+        self.highlightToday()  # 오늘 날짜 강조 유지
+
+if __name__ == "__main__":
+    app = QApplication([])
+    ex = CalendarWindow()
+    ex.show()
+    app.exec_()
