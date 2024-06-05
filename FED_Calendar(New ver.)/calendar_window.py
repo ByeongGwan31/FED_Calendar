@@ -66,7 +66,7 @@ class CalendarWindow(QMainWindow):
         self.nutritionInfoLabel.setReadOnly(True)
         self.tailLayout.addWidget(self.nutritionInfoLabel)
 
-        self.warningLabel = QLabel("⚠️ 제품의 이름을 정확히 입력히 입력하세요.<br>⚠️ 식품 성분 DB를 조회하는거라 검색한 정보가 없을수도 있습니다.", self)
+        self.warningLabel = QLabel("⚠️ 제품의 이름을 정확히 입력히 입력하세요.<br>⚠️ 식품 성분 DB를 조회하는거라 검색한 정보가 없을 수 있습니다.", self)
         self.warningLabel.setStyleSheet("color: red;")
         self.tailLayout.addWidget(self.warningLabel)
         
@@ -327,7 +327,7 @@ class CalendarWindow(QMainWindow):
     def updateDateTextFormat(self, date):
         format = QTextCharFormat()
         if date in self.productData:
-            format.setBackground(QBrush(QColor("#F1F1F1")))  # 일정 배경색
+            format.setBackground(QBrush(QColor("#D8D8D8")))  # 일정 배경색
         self.calendar.setDateTextFormat(date, format)
         self.highlightToday()
 
