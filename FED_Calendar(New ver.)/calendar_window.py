@@ -1,4 +1,5 @@
 import os
+import sys
 import pandas as pd
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -8,9 +9,13 @@ from calendar_functions import *
 class CalendarWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        super().__init__()
         self.initUI()
         self.productData = {}
-        self.csv_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'product_data.csv')
+        if hasattr(sys, '_MEIPASS'):
+            self.csv_file_path = os.path.join(sys._MEIPASS, 'product_data.csv')
+        else:
+            self.csv_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'product_data.csv')
         self.load_data()
 
     def initUI(self):

@@ -1,6 +1,7 @@
 import re
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
+from PyQt5.QtWidgets import *
 
 def get_input_with_validation(parent, title, label, regex, error_message):
     while True:
